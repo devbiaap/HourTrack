@@ -1,16 +1,20 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.schemas.usuario import UserCreate
 from app.database.database import get_db
 from app.models.usuario import Usuario
-from app.security.security import criar_hash_senha
+from app.security.security import criar_hash_senha, get_usuario_atual
 
 router = APIRouter(prefix="/usuarios",
                    tags=["Usuários"])
 
 @router.post("/")
-def criar_usuario(usuario: UserCreate, db: Session = Depends(get_db)):
+def criar_usuario(usuario: UserCreate, db: Session = Depends(get_db),
+                  usuario_atual: Usuario = Depends(get_usuario_atual)):
+    if usuario_atual.cargo != "RH":
+        raise HTTPException(status_code=403,
+                            detail="Apenas o RH pode cadastrar usuários")
     
     senha_hash = criar_hash_senha(usuario.senha)
 

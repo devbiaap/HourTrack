@@ -1,10 +1,11 @@
 from fastapi import FastAPI
-from app.routers import usuario, auth
+from app.routers import usuario, auth, ponto
 
 app = FastAPI()
 
 app.include_router(usuario.router)
 app.include_router(auth.router)
+app.include_router(ponto.router)
 
 
 @app.get("/")

@@ -29,5 +29,9 @@ class Ponto(Base):
     observacao = Column(String(500),
                         nullable=True)
 
+    saldo_minutos = Column(Integer,
+                           nullable=False,
+                           default=0)
+
     usuario = relationship("Usuario",
                            backref="pontos")

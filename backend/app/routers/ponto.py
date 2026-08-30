@@ -8,10 +8,14 @@ from app.security.security import get_usuario_atual
 from app.services.calculo_horas import calcular_horas_trabalhadas
 from datetime import date, datetime
 
-
 router =  APIRouter(prefix="/pontos",
                     tags=["Pontos"])
 
+def verificar_rh(usuario: Usuario):
+     if usuario.cargo != "RH":
+          raise HTTPException(status_code=403,
+                              detail="Apenas o RH pode acessar essa funcionalidade.")
+     
 @router.post("/")
 def registrar_ponto(dados: PontoCreate,
                     db: Session=Depends(get_db),
@@ -74,6 +78,55 @@ def meu_saldo(db: Session = Depends(get_db),
     return{"usuario": usuario_atual.nome,
            "saldo_minutos": saldo_total,
            "saldo_horas": f"{sinal}{horas:02d}:{minutos:02d}"}
+
+@router.get("/funcionario/{usuario_id}")
+def pontos_funcionario(usuario_id: int,
+                       db: Session = Depends(get_db),
+                       usuario_atual: Usuario = Depends(get_usuario_atual)):
+    verificar_rh(usuario_atual)
+
+    funcionario = (db.query(Usuario).filter(Usuario.id == usuario_id).first())
+
+    if funcionario is None:
+        raise HTTPException(status_code=404,
+                            detail="Usuário não encontrado.")
+
+    pontos = (db.query(Ponto).filter(Ponto.usuario_id == usuario_id).order_by(Ponto.data.desc()).all())
+    saldo_total = sum(ponto.saldo_minutos for ponto in pontos)
+
+    return {"funcionario": {"id": funcionario.id,
+                            "nome": funcionario.nome,
+                            "email": funcionario.email,
+                            "cargo": funcionario.cargo},
+                            "saldo_minutos": saldo_total,
+                            "pontos": pontos}
+
+@router.get("/funcionario/{usuario_id}/saldo")
+def saldo_funcionario(usuario_id: int,
+                      db: Session = Depends(get_db),
+                      usuario_atual: Usuario = Depends(get_usuario_atual)):
+    verificar_rh(usuario_atual)
+    funcionario = (db.query(Usuario).filter(Usuario.id == usuario_id).first())
+
+    if funcionario is None:
+        raise HTTPException(status_code=404,
+                            detail="Funcionario não encontrado")
+
+    pontos = (db.query(Ponto).filter(Ponto.usuario_id == usuario_id).all())
+
+    saldo_total = sum(ponto.saldo_minutos for ponto in pontos)
+
+    horas = abs(saldo_total) // 60
+    minutos = abs(saldo_total) % 60
+
+    sinal = "+" if saldo_total > 0 else "-" if saldo_total < 0 else ""
+
+    return {"funcionario": {"id": funcionario.id,
+                            "nome": funcionario.nome,
+                            "email": funcionario.email,
+                            "cargo": funcionario.cargo,
+                            "saldo_minutos": saldo_total,
+                            "saldo_horas": f"{sinal}{horas:02d}:{minutos:02d}"}}
 
 @router.post("/entrada")
 def registrar_entrada(db: Session = Depends(get_db),

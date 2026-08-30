@@ -9,6 +9,7 @@ from app.security.security import criar_hash_senha, get_usuario_atual
 router = APIRouter(prefix="/usuarios",
                    tags=["Usuários"])
 
+
 @router.post("/")
 def criar_usuario(usuario: UserCreate, db: Session = Depends(get_db),
                   usuario_atual: Usuario = Depends(get_usuario_atual)):

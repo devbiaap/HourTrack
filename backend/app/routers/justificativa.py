@@ -7,16 +7,16 @@ from app.models.usuario import Usuario
 from app.schemas.justificativa import JustificativaCreate
 from app.security.security import get_usuario_atual
 
-router = APIRouter(prefix="/justificativas",
-                   tags=["Justificativas"])
+router = APIRouter(prefix = "/justificativas",
+                   tags = ["Justificativas"])
 
 @router.post("/")
 def criar_justificativa(dados: JustificativaCreate,
                         db: Session = Depends(get_db),
                         usuario_atual: Usuario = Depends(get_usuario_atual)):
-    nova_justificativa = Justificativa(usuario_id=usuario_atual.id,
-                                       data=dados.data,
-                                       motivo=dados.motivo)
+    nova_justificativa = Justificativa(usuario_id = usuario_atual.id,
+                                       data = dados.data,
+                                       motivo = dados.motivo)
 
     db.add(nova_justificativa)
     db.commit()
@@ -35,8 +35,8 @@ def listar_justificativas(
 ):
     if usuario_atual.cargo != "RH":
         raise HTTPException(
-            status_code=403,
-            detail="Apenas o RH pode visualizar as justificativas."
+            status_code = 403,
+            detail = "Apenas o RH pode visualizar as justificativas."
         )
 
     justificativas = (
@@ -55,26 +55,22 @@ def aprovar_justificativa(
 ):
     if usuario_atual.cargo != "RH":
         raise HTTPException(
-            status_code=403,
-            detail="Apenas o RH pode aprovar justificativas."
+            status_code = 403,
+            detail = "Apenas o RH pode aprovar justificativas."
         )
 
-    justificativa = (
-        db.query(Justificativa)
-        .filter(Justificativa.id == justificativa_id)
-        .first()
-    )
+    justificativa = (db.query(Justificativa).filter(Justificativa.id == justificativa_id).first())
 
     if justificativa is None:
         raise HTTPException(
-            status_code=404,
-            detail="Justificativa não encontrada."
+            status_code = 404,
+            detail = "Justificativa não encontrada."
         )
 
     if justificativa.status != "PENDENTE":
         raise HTTPException(
-            status_code=400,
-            detail="Essa justificativa já foi analisada."
+            status_code = 400,
+            detail = "Essa justificativa já foi analisada."
         )
 
     justificativa.status = "APROVADA"
@@ -101,8 +97,8 @@ def recusar_justificativa(
 ):
     if usuario_atual.cargo != "RH":
         raise HTTPException(
-            status_code=403,
-            detail="Apenas o RH pode recusar justificativas."
+            status_code = 403,
+            detail = "Apenas o RH pode recusar justificativas."
         )
 
     justificativa = (
@@ -113,14 +109,14 @@ def recusar_justificativa(
 
     if justificativa is None:
         raise HTTPException(
-            status_code=404,
-            detail="Justificativa não encontrada."
+            status_code = 404,
+            detail = "Justificativa não encontrada."
         )
 
     if justificativa.status != "PENDENTE":
         raise HTTPException(
-            status_code=400,
-            detail="Essa justificativa já foi analisada."
+            status_code = 400,
+            detail = "Essa justificativa já foi analisada."
         )
 
     justificativa.status = "RECUSADA"
@@ -138,3 +134,12 @@ def recusar_justificativa(
             "status": justificativa.status
         }
     }
+
+
+
+@router.get("/minhas")
+def minhas_justificativas(db: Session = Depends(get_db),
+                          usuario_atual: Usuario = Depends(get_usuario_atual)):
+    justificativas = (db.query(Justificativa).filter(Justificativa.usuario_id == usuario_atual.id).order_by(Justificativa.data.desc()).all())
+
+    return justificativas
